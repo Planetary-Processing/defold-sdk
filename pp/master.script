@@ -1,0 +1,167 @@
+local protofile = [[syntax = "proto3";
+
+package planetary;
+
+message Init {
+	uint64 GameID = 1;
+	string PlayerID = 2;
+}
+
+message WrappedPacket {
+	bytes Packet = 1;
+	Init Init= 2;
+}
+
+message Position {
+	double X = 1;
+	double Y = 2;
+	double Z = 3;
+}
+
+message UpdateEntity {
+	string EntityID = 1;
+	double X = 2;
+	double Y = 3;
+	double Z = 4;
+	string Data = 5;
+	string Type = 6;
+}
+
+message DeleteEntity {
+	string EntityID = 1;
+}
+
+message Packet {
+	Position Join = 1;
+	UpdateEntity Update = 2; // server side
+	DeleteEntity Delete = 3; // server side
+	bool Leave = 4; // client side or server side (forces disconnect if sent serverside)
+	string Arbitrary = 5; // client side
+	string Event = 6; // server side
+}
+
+message Login {
+	string Token = 1;
+	uint64 GameID = 2;
+	string UUID = 3;
+	// optionally use these instead of token
+	string Email = 4;
+	string Password = 5;
+}
+]]
+
+local socket = require("socket")
+local base64 = require("pp.base64")
+local rc4 = require("pp.rc4")
+local json = require("pp.json")
+pb=pb
+
+go.property("player_url", hash("/player"))
+go.property("gameid", 0)
+go.property("max_packets", 64)
+
+local function connect(self)
+	local protoc = require("pb.protoc")
+	protoc:load(protofile)
+	self.s = socket.tcp()
+	local i, _ = self.s:connect("planetaryprocessing.io", 42)
+	if i ~= 1 then
+		print("failed connection")
+		return
+	end
+	local login = {UUID=self.uuid, GameID=self.gameid}
+	local data = pb.encode("planetary.Login", login)
+	local _,err,_ = self.s:send(base64.encode(data).."\n")
+	if err then
+		print(err)
+		return
+	end
+	local res,err,_ = self.s:receive("*l")
+	if err then
+		print(err)
+		return
+	end
+
+	local connresult = pb.decode("planetary.Login", base64.decode(res))
+	if connresult.UUID ~= self.uuid then
+		print("failed to connect")
+	else
+		print("Connected to PP servers")
+		self.connected = true
+		self.s:settimeout(0)
+	end
+end
+
+function init(self)
+	self.entities = {}
+	local headers = {
+		["Content-Type"] = "application/x-www-form-urlencoded"
+	}
+	local body = json.encode({GameID=self.gameid, Username="", Password=""})
+	http.request(
+		"https://api.planetaryprocessing.io/_api/golang.planetaryprocessing.io/apis/httputils/HTTPUtils/GetKey",
+		"POST",
+		function(self, _, resp)
+			if resp.status == 200 then
+				local response = json.decode(resp.response)
+				print("Authenticated with UUID:" ..response.UUID)
+				self.uuid = response.UUID
+				local key = base64.decode(response.Key)
+				self.rc4in = rc4(key)
+				self.rc4out = rc4(key)
+				connect(self)
+			else
+				print("Failed to authenticate")
+			end
+		end,
+		headers,
+		body
+	)
+end
+
+function final(self)
+
+end
+
+local function handle(self, packet)
+	for k, e in pairs(packet) do
+		if k == "Update" then
+			if not self.entities[e.EntityID] then
+				if self.uuid == e.EntityID then
+					self.entities[e.EntityID] = self.player_url
+				else
+					local ok, res = pcall(factory.create, "#"..e.Type.."factory")
+					if ok then self.entities[e.EntityID] = res else print(res) end
+				end
+			end
+			msg.post(self.entities[e.EntityID], "pp_update", {x=e.X, y=e.Y, z=e.Z, data=json.decode(e.Data)})
+		elseif k == "Delete" and self.entities[e.EntityID] then
+			if self.uuid ~= e.EntityID then go.delete(self.entities[e.EntityID]) end
+			self.entities[e.EntityID] = nil
+		end
+	end
+end
+
+function update(self, dt)
+	if self.connected then
+		for i=1,self.max_packets do
+			local res,err,_ = self.s:receive("*l")
+			if err then
+				break
+			end
+			local pckt = pb.decode("planetary.Packet", self.rc4in(base64.decode(res)))
+			handle(self, pckt)
+		end
+	end
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("pp_join") then
+		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Join={}})))
+		self.s:send(d.."\n")
+	end
+	if message_id == hash("pp_message") then
+		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Arbitrary=json.encode(message)})))
+		self.s:send(d.."\n")
+	end
+end
