@@ -147,10 +147,17 @@ function update(self, dt)
 		for i=1,self.max_packets do
 			local res,err,_ = self.s:receive("*l")
 			if err then
+				if err ~= "timeout" then
+					print(err)
+					self.connected = false
+				end
 				break
 			end
-			local pckt = pb.decode("planetary.Packet", self.rc4in(base64.decode(res)))
-			handle(self, pckt)
+			if res then
+				local bts = base64.decode(res)
+				local pckt = pb.decode("planetary.Packet", self.rc4in(bts))
+				handle(self, pckt)
+			end
 		end
 	end
 end
