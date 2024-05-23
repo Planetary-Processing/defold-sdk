@@ -91,12 +91,11 @@ local function connect(self)
 	end
 end
 
-function init(self)
-	self.entities = {}
+function auth(self, un, pw)
 	local headers = {
 		["Content-Type"] = "application/x-www-form-urlencoded"
 	}
-	local body = json.encode({GameID=self.gameid, Username="", Password=""})
+	local body = json.encode({GameID=self.gameid, Username=un, Password=pw})
 	http.request(
 		"https://api.planetaryprocessing.io/_api/golang.planetaryprocessing.io/apis/httputils/HTTPUtils/GetKey",
 		"POST",
@@ -116,6 +115,10 @@ function init(self)
 		headers,
 		body
 	)
+end
+
+function init(self)
+	self.entities = {}
 end
 
 function final(self)
@@ -162,6 +165,9 @@ function update(self, dt)
 end
 
 function on_message(self, message_id, message, sender)
+	if message_id == hash("pp_init") then
+		auth(self, message.username or "", message.password or "")
+	end
 	if message_id == hash("pp_join") then
 		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Join={}})))
 		self.s:send(d.."\n")
