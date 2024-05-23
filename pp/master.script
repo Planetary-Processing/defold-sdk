@@ -133,7 +133,7 @@ local function handle(self, packet)
 					if ok then self.entities[e.EntityID] = res else print(res) end
 				end
 			end
-			msg.post(self.entities[e.EntityID], "pp_update", {x=e.X, y=e.Y, z=e.Z, data=json.decode(e.Data)})
+			msg.post(self.entities[e.EntityID], "pp_update", {uuid=e.EntityID, x=e.X, y=e.Y, z=e.Z, data=json.decode(e.Data)})
 		elseif k == "Delete" and self.entities[e.EntityID] then
 			if self.uuid ~= e.EntityID then go.delete(self.entities[e.EntityID]) end
 			self.entities[e.EntityID] = nil
