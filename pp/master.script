@@ -58,7 +58,6 @@ pb=pb
 
 go.property("player_url", hash("/player"))
 go.property("gameid", 0)
-go.property("max_packets", 64)
 
 local function connect(self)
 	local protoc = require("pb.protoc")
@@ -144,7 +143,7 @@ end
 
 function update(self, dt)
 	if self.connected then
-		for i=1,self.max_packets do
+		for i=1,64 do
 			local res,err,_ = self.s:receive("*l")
 			if err then
 				if err ~= "timeout" then
