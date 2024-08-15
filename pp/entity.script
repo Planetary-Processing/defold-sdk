@@ -1,13 +1,13 @@
 go.property("use_server_position", true)
 
 function init(self)
-	self.poo = "true"
+	self.data = {}
 end
 
 function on_message(self, message_id, message, sender)
 	if message_id == hash("pp_update") then
 		if self.use_server_position then go.set_position(vmath.vector3(message.x, message.y, message.z)) end
-		-- self.data = message.data
+		self.data = message.data
 		self.uuid = message.uuid
 	end
 end

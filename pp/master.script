@@ -119,6 +119,7 @@ end
 
 function init(self)
 	self.entities = {}
+	self.buf = ""
 end
 
 function final(self)
@@ -144,22 +145,32 @@ local function handle(self, packet)
 	end
 end
 
-function update(self, dt)
+function fixed_update(self, dt)
 	if self.connected then
-		for i=1,64 do
-			local res,err,_ = self.s:receive("*l")
+		for i=1,128 do
+			local res,err,part = self.s:receive("*l")
 			if err then
 				if err ~= "timeout" then
-					print(err)
 					self.connected = false
+				else
+					self.part = part
 				end
 				break
 			end
 			if res then
+				if self.part then
+					res = self.part .. res
+					self.part = nil
+				end
 				local bts = base64.decode(res)
-				local pckt = pb.decode("planetary.Packet", self.rc4in(bts))
+				bts = self.rc4in(bts)
+				local pckt = pb.decode("planetary.Packet", bts)
 				handle(self, pckt)
 			end
+		end
+		if #self.buf > 0 then
+			self.s:send(self.buf)
+			self.buf = ""
 		end
 	end
 end
@@ -174,6 +185,6 @@ function on_message(self, message_id, message, sender)
 	end
 	if message_id == hash("pp_message") then
 		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Arbitrary=json.encode(message)})))
-		self.s:send(d.."\n")
+		self.buf = self.buf .. d.."\n"
 	end
 end
