@@ -153,7 +153,7 @@ function fixed_update(self, dt)
 				if err ~= "timeout" then
 					self.connected = false
 				else
-					self.part = part
+					if self.part then self.part = self.part .. part else self.part = part end
 				end
 				break
 			end
