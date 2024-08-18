@@ -1,12 +1,17 @@
 --this behavior script applies only to the entities and OTHER players encountered in the game, the client's player is represented 
 --separately as a game object literal in the main.collection
 go.property("use_server_position", true) --this allows the server position to overwrite the local positions for entities by id when 
-										 --the server indicates that the position has changed
+                                         --the server indicates that the position has changed
+
+function init(self)
+	self.data = {}
+end
+
 function on_message(self, message_id, message, sender)
 	if message_id == hash("pp_update") then
 		--pprint(message)
 		if self.use_server_position then go.set_position(vmath.vector3(message.x, message.y, message.z)) end
-		-- self.data = message.data
+		self.data = message.data
 		self.uuid = message.uuid
 	end
 end
