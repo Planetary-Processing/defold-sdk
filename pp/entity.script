@@ -1,5 +1,7 @@
---this allows the server position to overwrite the local positions for entities by id when the server indicates that the position has changed
-go.property("use_server_position", true) 
+--this behavior script applies only to the entities and OTHER players encountered in the game, the client's player is represented 
+--separately as a game object literal in the main.collection
+go.property("use_server_position", true) --this allows the server position to overwrite the local positions for entities by id when 
+                                         --the server indicates that the position has changed
 
 function init(self)
 	self.data = {}
