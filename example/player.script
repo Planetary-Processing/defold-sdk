@@ -1,69 +1,36 @@
+--this behavior script describes the local playable character
 function init(self)
-	-- Add initialization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
+	self.position = vmath.vector3(0,0,0)
+	self.input = {w=false,a=false,s=false,d=false,x=0,y=0}
+	self.speed = 3
+	self.keys = {[hash("key_w")] = "w", [hash("key_a")] = "a", [hash("key_s")] = "s", [hash("key_d")] = "d"}
 	msg.post(".", "acquire_input_focus")
-	msg.post("/go", "pp_init", {})
-	self.joined = false
-end
-
-function final(self)
-	-- Add finalization code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
-
-function update(self, dt)
-	-- Add update code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
-
-function fixed_update(self, dt)
-	-- This function is called if 'Fixed Update Frequency' is enabled in the Engine section of game.project
-	-- Can be coupled with fixed updates of the physics simulation if 'Use Fixed Timestep' is enabled in
-	-- Physics section of game.project
-	-- Add update code here
-	-- Learn more: https://defold.com/manuals/script/
-	-- Remove this function if not needed
-end
+	msg.post("/main", "pp_init", {}) --this initializes the SDK. If you are using authentication, you should provide the player's login to the
+end								   --third parameter in the form {username=$$$, password=$$$}
 
 function on_message(self, message_id, message, sender)
 	if message_id == hash("pp_update") then
-		for k, v in pairs(message.data) do print(k, "=", v) end
+		for k, v in pairs(message.data) do print(k, "=", v) end --this compact for-loop prints all fields in a "pp_update" frame as key=value,
+	end															--with each item on a newline. This is handy for debugging, but will make your 
+end																--console laggy if you have too many events.
+
+function fixed_update(self, dt) --fixed update is configured in game.project to only fire 10 times a second
+	if self.send and self.joined then --this protects against wasting bandwidth on empty messages
+		self.send = false
+		self.input.x = (self.input.d and self.speed or 0) - (self.input.a and self.speed or 0)
+		self.input.y = (self.input.w and self.speed or 0) - (self.input.s and self.speed or 0)
+		self.position.x, self.position.y = self.position.x + self.input.x, self.position.y + self.input.y
+		msg.post("/main", "pp_message", { x=self.input.x*dt, y=self.input.y*dt, z=0 } )
+		go.animate("/player", "position", go.PLAYBACK_ONCE_FORWARD, self.position, go.EASING_LINEAR, dt)
 	end
 end
 
 function on_input(self, action_id, action)
-	if action_id == hash("key_space") and action.pressed and not self.joined then
-		msg.post("/go", hash("pp_join"))
-		self.joined = true
+	if action_id == hash("key_space") and action.pressed and not self.joined then --this if statement prevents the player from sending the 
+		self.joined = true														  --pp_join message twice, and requires the player to press 
+		msg.post("/main", "pp_join")												  --SPACE to start the game
+	elseif self.keys[action_id] then --listen for WASD and set self.input.{key} to true if it is pressed
+		self.input[self.keys[action_id]] = not action.released
+		self.send = true
 	end
-	local d = {x=0, y=0, z=0}
-	local send = false
-	if action_id == hash("key_w") and not action.released then
-		d.y = d.y + 0.5
-		send = true
-	end
-	if action_id == hash("key_a") and not action.released then
-		d.x = d.x - 0.5
-		send = true
-	end
-	if action_id == hash("key_s") and not action.released then
-		d.y = d.y - 0.5
-		send = true
-	end
-	if action_id == hash("key_d") and not action.released then
-		d.x = d.x + 0.5
-		send = true
-	end
-	if send then
-		msg.post("/go", "pp_message", d)
-	end
-end
-
-function on_reload(self)
-	-- Add reload-handling code here
-	-- Learn more: https://defold.com/manuals/hot-reload/
-	-- Remove this function if not needed
 end

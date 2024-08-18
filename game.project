@@ -28,5 +28,13 @@ default_texture_mag_filter = nearest
 max_count = 1024
 
 [input]
-game_binding = /builtins/input/all.input_bindingc
+game_binding = /example/minimal.input_bindingc
+use_accelerometer = 0
+
+[physics]
+use_fixed_timestep = 1
+
+[engine]
+fixed_update_frequency = 10
+run_while_iconified = 1
 

@@ -1,0 +1,13 @@
+images {
+  image: "/example/assets/cat.png"
+}
+images {
+  image: "/example/assets/cim.png"
+}
+images {
+  image: "/example/assets/tree.png"
+}
+images {
+  image: "/example/assets/grass.png"
+}
+extrude_borders: 2
