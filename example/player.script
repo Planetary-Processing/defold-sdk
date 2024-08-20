@@ -19,7 +19,7 @@ function fixed_update(self, dt) --fixed update is configured in game.project to 
 		self.send = false
 		self.input.x = (self.input.d and self.speed or 0) - (self.input.a and self.speed or 0)
 		self.input.y = (self.input.w and self.speed or 0) - (self.input.s and self.speed or 0)
-		self.position.x, self.position.y = self.position.x + self.input.x, self.position.y + self.input.y
+		self.position.x, self.position.y = self.position.x + self.input.x*dt, self.position.y + self.input.y*dt
 		msg.post("/main", "pp_message", { x=self.input.x*dt, y=self.input.y*dt, z=0 } )
 		go.animate("/player", "position", go.PLAYBACK_ONCE_FORWARD, self.position, go.EASING_LINEAR, dt)
 	end
