@@ -69,7 +69,7 @@ local PP_JOIN = hash("pp_join")
 -- send pp_message to this script to send a custom message to the server
 local PP_MESSAGE = hash("pp_message")
 -- send pp_leave to this script to terminate the connection
-local PP_LEAVE = hash("pp_leave")
+local PP_DISCONNECT = hash("pp_disconnect")
 
 -- sent to the listener when an entity is updated
 local PP_UPDATE = hash("pp_update")
@@ -81,7 +81,7 @@ local PP_DELETE = hash("pp_delete")
 -- sent to the listener when connected to the server
 local PP_CONNECTED = hash("pp_connected")
 -- sent to the listener when disconnected from the server
-local PP_DISCONNECTED = hash("pp_connected")
+local PP_DISCONNECTED = hash("pp_disconnected")
 -- sent to the listener when there was a problem connecting to the server
 local PP_CONNECTION_ERROR = hash("pp_connection_error")
 -- sent to the listener when there was a problem authenticating with the server
@@ -242,12 +242,12 @@ function on_message(self, message_id, message, sender)
 		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Arbitrary=json.encode(message)})))
 		self.buf = self.buf .. d.."\n"
 	end
-	if message_id == PP_LEAVE then
+	if message_id == PP_DISCONNECT then
 		for eID,eURL in pairs(self.entities) do
 			if self.uuid ~= eID then go.delete(eURL) end
 		end
 		self.connected = false
 		self.s:close()
-		msg.post(self.listener_url, PP_DISCONNECTED, { message = "pp_leave received" })
+		msg.post(self.listener_url, PP_DISCONNECTED, { message = "pp_disconnect received" })
 	end
 end

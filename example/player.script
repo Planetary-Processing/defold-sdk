@@ -28,7 +28,7 @@ function on_input(self, action_id, action)
 		self.send = true
 	elseif action_id == hash("key_l") and action.pressed and self.joined then --disconnect from the PP servers
 		self.joined = false
-		msg.post("/main", "pp_leave")	
+		msg.post("/main", "pp_disconnect")	
 	elseif action_id == hash("key_j") and action.pressed and not self.joined then --reconnect to the PP servers
 		msg.post("/main", "pp_init")						
 	end
