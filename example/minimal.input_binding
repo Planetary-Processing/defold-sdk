@@ -18,3 +18,11 @@ key_trigger {
   input: KEY_D
   action: "key_d"
 }
+key_trigger {
+  input: KEY_J
+  action: "key_j"
+}
+key_trigger {
+  input: KEY_L
+  action: "key_l"
+}
