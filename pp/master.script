@@ -197,7 +197,7 @@ end
 
 function fixed_update(self, dt)
 	if self.connected then
-		for i=1,128 do
+		for i=1,1024 do
 			local res,err,part = self.s:receive("*l")
 			if err then
 				if err ~= "timeout" then
