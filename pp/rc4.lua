@@ -42,7 +42,7 @@ elseif _VERSION == "Lua 5.3" or _VERSION == "Lua 5.4" then
 	--local bitwise = require("bitwise")
 	bit_xor = bitwise.xor
 else
-	bit_xor = bit.bxor
+	error("unsupported Lua version")
 end
 
 local new_ks, rc4_crypt
