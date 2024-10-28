@@ -234,11 +234,11 @@ function on_message(self, message_id, message, sender)
 		self.buf = ""
 		auth(self, message.username or "", message.password or "")
 	end
-	if message_id == PP_JOIN then
+	if message_id == PP_JOIN and self.connected then
 		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Join={}})))
 		self.s:send(d.."\n")
 	end
-	if message_id == PP_MESSAGE then
+	if message_id == PP_MESSAGE and self.connected then
 		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Arbitrary=json.encode(message)})))
 		self.buf = self.buf .. d.."\n"
 	end
