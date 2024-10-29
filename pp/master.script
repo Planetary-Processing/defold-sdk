@@ -71,6 +71,9 @@ local PP_MESSAGE = hash("pp_message")
 -- send pp_leave to this script to terminate the connection
 local PP_DISCONNECT = hash("pp_disconnect")
 
+-- change the player url
+local PP_CHANGE_PLAYER_URL = hash("pp_change_player_url")
+
 -- sent to the listener when an entity is updated
 local PP_UPDATE = hash("pp_update")
 -- sent to the listener when an entity is spawned
@@ -233,21 +236,20 @@ function on_message(self, message_id, message, sender)
 		self.entities = {}
 		self.buf = ""
 		auth(self, message.username or "", message.password or "")
-	end
-	if message_id == PP_JOIN and self.connected then
+	elseif message_id == PP_JOIN and self.connected then
 		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Join={}})))
 		self.s:send(d.."\n")
-	end
-	if message_id == PP_MESSAGE and self.connected then
+	elseif message_id == PP_MESSAGE and self.connected then
 		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Arbitrary=json.encode(message)})))
 		self.buf = self.buf .. d.."\n"
-	end
-	if message_id == PP_DISCONNECT then
+	elseif message_id == PP_DISCONNECT then
 		for eID,eURL in pairs(self.entities) do
 			if self.uuid ~= eID then go.delete(eURL) end
 		end
 		self.connected = false
 		self.s:close()
 		msg.post(self.listener_url, PP_DISCONNECTED, { message = "pp_disconnect received" })
+	elseif message_id == PP_CHANGE_PLAYER_URL then
+		self.player_url = hash(message.player_url)
 	end
 end
