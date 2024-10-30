@@ -250,6 +250,6 @@ function on_message(self, message_id, message, sender)
 		self.s:close()
 		msg.post(self.listener_url, PP_DISCONNECTED, { message = "pp_disconnect received" })
 	elseif message_id == PP_CHANGE_PLAYER_URL then
-		self.player_url = hash(message.player_url)
+		self.player_url = msg.url(message.player_url)
 	end
 end
