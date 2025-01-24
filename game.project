@@ -16,6 +16,7 @@ input_method = HiddenInputField
 title = defold-sdk
 dependencies#0 = https://github.com/Melsoft-Games/defold-protobuf/archive/master.zip
 dependencies#1 = https://github.com/britzl/defold-orthographic/archive/master.zip
+dependencies#2 = https://github.com/defold/extension-websocket/archive/master.zip
 
 [library]
 include_dirs = pp
@@ -37,4 +38,7 @@ use_fixed_timestep = 1
 [engine]
 fixed_update_frequency = 10
 run_while_iconified = 1
+
+[websocket]
+debug = 1
 

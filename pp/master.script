@@ -31,13 +31,21 @@ message DeleteEntity {
 	string EntityID = 1;
 }
 
+message Chunk {
+	uint64 ID = 1;
+	string Data = 2;
+	int64 X = 3;
+	int64 Y = 4;
+}
+
 message Packet {
-	Position Join = 1;
+	Position Join = 1; // client side to join at location
 	UpdateEntity Update = 2; // server side
 	DeleteEntity Delete = 3; // server side
 	bool Leave = 4; // client side or server side (forces disconnect if sent serverside)
 	string Arbitrary = 5; // client side
 	string Event = 6; // server side
+	Chunk Chunk = 7; // server side
 }
 
 message Login {
@@ -53,7 +61,6 @@ message Login {
 pb = pb
 local socket = require("socket")
 local base64 = require("pp.base64")
-local rc4 = require("pp.rc4")
 local json = require("pp.json")
 local protoc = require("pb.protoc")
 protoc:load(protofile)
@@ -89,77 +96,6 @@ local PP_DISCONNECTED = hash("pp_disconnected")
 local PP_CONNECTION_ERROR = hash("pp_connection_error")
 -- sent to the listener when there was a problem authenticating with the server
 local PP_AUTHENTICATION_ERROR = hash("pp_authentication_error")
-
-
-local function connect(self)
-	self.s = socket.tcp()
-	local i, _ = self.s:connect("planetaryprocessing.io", 42)
-	if i ~= 1 then
-		print("failed connection")
-		msg.post(self.listener_url, PP_CONNECTION_ERROR, { error = "Failed to connect" })
-		return
-	end
-	local login = {UUID=self.uuid, GameID=self.gameid}
-	local data = pb.encode("planetary.Login", login)
-	local _,login_err,_ = self.s:send(base64.encode(data).."\n")
-	if login_err then
-		print(login_err)
-		msg.post(self.listener_url, PP_CONNECTION_ERROR, { error = login_err })
-		return
-	end
-	local res,read_err,_ = self.s:receive("*l")
-	if read_err then
-		print(read_err)
-		msg.post(self.listener_url, PP_CONNECTION_ERROR, { error = read_err })
-		return
-	end
-
-	local connresult = pb.decode("planetary.Login", base64.decode(res))
-	if connresult.UUID ~= self.uuid then
-		print("failed to connect")
-		msg.post(self.listener_url, PP_CONNECTION_ERROR, { error = "Failed to connect" })
-	else
-		print("Connected")
-		msg.post(self.listener_url, PP_CONNECTED, { uuid = connresult.UUID })
-		self.connected = true
-		self.s:settimeout(0)
-	end
-end
-
-local function auth(self, un, pw)
-	local headers = {
-		["Content-Type"] = "application/x-www-form-urlencoded"
-	}
-	local body = json.encode({GameID=self.gameid, Username=un, Password=pw})
-	http.request(
-	"https://api.planetaryprocessing.io/_api/golang.planetaryprocessing.io/apis/httputils/HTTPUtils/GetKey",
-	"POST",
-	function(self, _, resp)
-		if resp.status == 200 then
-			local response = json.decode(resp.response)
-			print("Authenticated with UUID:" ..response.UUID)
-			self.uuid = response.UUID
-			local key = base64.decode(response.Key)
-			self.rc4in = rc4(key)
-			self.rc4out = rc4(key)
-			connect(self)
-		else
-			print("Failed to authenticate")
-			msg.post(self.listener_url, PP_AUTHENTICATION_ERROR, { error = "Failed to authenticate", code = resp.status, message = resp.response })
-		end
-	end,
-	headers,
-	body
-)
-end
-
-function init(self)
-	
-end
-
-function final(self)
-
-end
 
 local function handle(self, packet)
 	for k, e in pairs(packet) do
@@ -198,35 +134,56 @@ local function handle(self, packet)
 	end
 end
 
-function fixed_update(self, dt)
-	if self.connected then
-		for i=1,1024 do
-			local res,err,part = self.s:receive("*l")
-			if err then
-				if err ~= "timeout" then
-					self.connected = false
-					print("Disconnected:", err)
-					msg.post(self.listener_url, PP_DISCONNECTED, { message = err })
-				else
-					if self.part then self.part = self.part .. part else self.part = part end
-				end
-				break
-			end
-			if res then
-				if self.part then
-					res = self.part .. res
-					self.part = nil
-				end
-				local bts = base64.decode(res)
-				bts = self.rc4in(bts)
-				local pckt = pb.decode("planetary.Packet", bts)
+local function make_callback(login)
+	return function (self, conn, data)
+		if data.event == websocket.EVENT_DISCONNECTED then
+			msg.post(self.listener_url, PP_DISCONNECTED, { error = data.message })
+			self.connected = false
+		elseif data.event == websocket.EVENT_CONNECTED then
+			self.connected = true
+			local data = pb.encode("planetary.Login", login)
+			websocket.send(self.connection, data)
+			msg.post(self.listener_url, PP_CONNECTED, { error = data.message })
+		elseif data.event == websocket.EVENT_ERROR then
+			print(data.message)
+			msg.post(self.listener_url, PP_CONNECTION_ERROR, { error = data.message })
+		elseif data.event == websocket.EVENT_MESSAGE then
+			if self.uuid == nil then
+				local pckt = pb.decode("planetary.Login", data.message)
+				self.uuid = pckt.UUID
+			else
+				local pckt = pb.decode("planetary.Packet", base64.decode(data.message))
 				handle(self, pckt)
 			end
+		else
+			print("HI!")
 		end
-		if #self.buf > 0 then
-			self.s:send(self.buf)
-			self.buf = ""
-		end
+	end
+end
+
+function fixed_update(self, dt)
+end
+
+local function connect(self, un, pw)
+	self.url = "wss://planetaryprocessing.io/_ws"
+	local params = {
+		headers="Origin: https://planetaryprocessing.io\r\n",
+		timeout=3600000,
+		type = websocket.DATA_TYPE_TEXT,
+	}
+	self.connection = websocket.connect(self.url, params, make_callback({GameID=self.gameid, Username=un, Password=pw}))
+end
+
+local function auth(self, un, pw)
+	connect(self, un, pw)
+end
+
+function init(self)
+end
+
+function final(self)
+	if self.connection ~= nil then
+		websocket.disconnect(self.connection)
 	end
 end
 
@@ -236,18 +193,16 @@ function on_message(self, message_id, message, sender)
 		self.entities = {}
 		self.buf = ""
 		auth(self, message.username or "", message.password or "")
-	elseif message_id == PP_JOIN and self.connected then
-		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Join={}})))
-		self.s:send(d.."\n")
+	elseif message_id == PP_JOIN and self.connected then 
+		local d = websocket.send(self.connection, base64.encode(pb.encode("planetary.Packet", {Join={}})))
 	elseif message_id == PP_MESSAGE and self.connected then
-		local d = base64.encode(self.rc4out(pb.encode("planetary.Packet", {Arbitrary=json.encode(message)})))
-		self.buf = self.buf .. d.."\n"
+		local d = websocket.send(self.connection, base64.encode(pb.encode("planetary.Packet", {Arbitrary=json.encode(message)})))
 	elseif message_id == PP_DISCONNECT then
 		for eID,eURL in pairs(self.entities) do
 			if self.uuid ~= eID then go.delete(eURL) end
 		end
 		self.connected = false
-		self.s:close()
+		--websocket.disconnect(self.connection)
 		msg.post(self.listener_url, PP_DISCONNECTED, { message = "pp_disconnect received" })
 	elseif message_id == PP_CHANGE_PLAYER_URL then
 		self.player_url = msg.url(message.player_url)
