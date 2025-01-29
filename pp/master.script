@@ -31,7 +31,7 @@ message DeleteEntity {
 	string EntityID = 1;
 }
 
-message Chunk {
+message ChunkUpdate {
 	uint64 ID = 1;
 	string Data = 2;
 	int64 X = 3;
@@ -45,7 +45,7 @@ message Packet {
 	bool Leave = 4; // client side or server side (forces disconnect if sent serverside)
 	string Arbitrary = 5; // client side
 	string Event = 6; // server side
-	Chunk Chunk = 7; // server side
+	ChunkUpdate Chunk = 7; // server side
 }
 
 message Login {
@@ -53,7 +53,7 @@ message Login {
 	uint64 GameID = 2;
 	string UUID = 3;
 	// optionally use these instead of token
-	string Email = 4;
+	string Username = 4;
 	string Password = 5;
 }
 ]]
