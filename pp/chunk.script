@@ -1,0 +1,10 @@
+function init(self)
+	self.data = {}
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("pp_update") then
+		self.data = message.data
+		self.uuid = message.uuid
+	end
+end
