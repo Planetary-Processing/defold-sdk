@@ -1,4 +1,7 @@
 --this behavior script describes the local playable character
+local socket = require "socket"
+
+
 function init(self)
 	self.position = vmath.vector3(0,0,0)
 	self.input = {w=false,a=false,s=false,d=false,x=0,y=0}
@@ -14,8 +17,12 @@ function fixed_update(self, dt) --fixed update is configured in game.project to 
 		self.input.x = (self.input.d and self.speed or 0) - (self.input.a and self.speed or 0)
 		self.input.y = (self.input.w and self.speed or 0) - (self.input.s and self.speed or 0)
 		self.position.x, self.position.y = self.position.x + self.input.x*dt, self.position.y + self.input.y*dt
-		msg.post("/main", "pp_message", { x=self.input.x*dt, y=self.input.y*dt, z=0 } )
+		self.current_time = socket.gettime()
+		msg.post("/main", "pp_message", { x=self.input.x*dt, y=self.input.y*dt, z=0 ,  test=self.current_time} )
 		go.animate("/player", "position", go.PLAYBACK_ONCE_FORWARD, self.position, go.EASING_LINEAR, dt)
+
+
+			
 	end
 end
 
@@ -33,3 +40,4 @@ function on_input(self, action_id, action)
 		msg.post("/main", "pp_init")						
 	end
 end
+

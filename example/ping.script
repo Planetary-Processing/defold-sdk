@@ -1,3 +1,8 @@
+--this behavior script describes the local playable character
+local socket = require "socket"
+
+
+
 --this allows the server position to overwrite the local positions for entities by id when the server indicates that the position has changed
 go.property("use_server_position", true) 
 
@@ -12,5 +17,9 @@ function on_message(self, message_id, message, sender)
 		self.data = message.data
 		self.uuid = message.uuid
 
+		self.current_time = socket.gettime()
+		if self.data.test then 
+			--print("debug ping:", self.current_time - self.data.test)
+		end
 	end
 end

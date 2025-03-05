@@ -1,6 +1,6 @@
 components {
   id: "entity"
-  component: "/pp/entity.script"
+  component: "/example/ping.script"
 }
 embedded_components {
   id: "sprite"

@@ -69,6 +69,8 @@ go.property("player_url", hash("/player"))
 go.property("gameid", 0)
 go.property("chunk_size", 64)
 
+local chunksActive = true
+
 -- send pp_init to this script to authenticate and connect to the server
 -- the sender of pp_init will receive connection status message (see below)
 local PP_INIT = hash("pp_init")
@@ -103,6 +105,10 @@ local function handle(self, packet)
 		if k == "Update" then
 			-- create entity message
 			local message = {uuid=e.EntityID, x=e.X, y=e.Y, z=e.Z, type=e.Type, data=json.decode(e.Data)}
+			if message.data.test then
+				local current_time = socket.gettime()
+				print("Ping:", socket.gettime() - message.data.test)
+			end
 
 			-- is this a new entity?
 			if not self.entities[e.EntityID] then
@@ -132,9 +138,9 @@ local function handle(self, packet)
 			if self.uuid ~= e.EntityID then go.delete(self.entities[e.EntityID]) end
 			self.entities[e.EntityID] = nil
 
-		elseif k == "Chunk" then
+		elseif k == "Chunk" and chunksActive then
 			local message = {uuid=e.ID, x=e.X, y=e.Y, z=e.Z, type=e.Type, data=json.decode(e.Data)}
- 
+
 			if not self.chunks[e.ID] then
 				if self.uuid == e.ID then
 					self.chunks[e.ID] = self.player_url
@@ -142,42 +148,49 @@ local function handle(self, packet)
 					print("Spawning chunk at",e.X, e.Y, "0")
 					--TODO multiply by var chunk size
 					local ok, res = pcall(factory.create, "#chunkfactory", vmath.vector3(e.X * self.chunk_size , e.Y *  self.chunk_size, 0))
-					if ok then self.chunks[e.ID] = res else print(res) end
+					if ok then self.chunks[e.ID] = res else 
+						print(res) 
+						print("Chunk storage (optional) has not been implemented on this project.")
+						chunksActive = false
+					end
 				end
 				-- send a pp_spawn message to the listener
 				message.id = self.chunks[e.ID]
 				msg.post(self.listener_url, PP_SPAWN, message)
 			end
+			if chunksActive  then
+				-- send a pp_update message to the entity
+				msg.post(self.chunks[e.ID], PP_UPDATE, message)
 
-			-- send a pp_update message to the entity
-			msg.post(self.chunks[e.ID], PP_UPDATE, message)
+				-- send a pp_update message to the listener
+				message.id = self.chunks[e.ID]
+				msg.post(self.listener_url, PP_UPDATE, message)
 
-			-- send a pp_update message to the listener
-			message.id = self.chunks[e.ID]
-			msg.post(self.listener_url, PP_UPDATE, message)
+				--TODO cull chunks more than 3 away from this chunk
+				-- Cull chunks that are more than 3 away in X or Y
+				for chunkID, chunkInstance in pairs(self.chunks) do
+					local chunkPos = go.get_position(chunkInstance)  -- Get chunk's position
+					local chunkX, chunkY = chunkPos.x /  self.chunk_size, chunkPos.y /  self.chunk_size  -- Convert back to chunk coordinates
 
-			--TODO cull chunks more than 3 away from this chunk
-			-- Cull chunks that are more than 3 away in X or Y
-			for chunkID, chunkInstance in pairs(self.chunks) do
-				local chunkPos = go.get_position(chunkInstance)  -- Get chunk's position
-				local chunkX, chunkY = chunkPos.x /  self.chunk_size, chunkPos.y /  self.chunk_size  -- Convert back to chunk coordinates
-		
-				-- If chunk is more than 3 units away, remove it
-				if math.abs(chunkX - e.X) > 3 or math.abs(chunkY - e.Y) > 3 then
-					print("Removing distant chunk at", chunkX, chunkY)
-					
-					msg.post(self.listener_url, PP_DELETE, message)
-					go.delete(chunkInstance)  
-					self.chunks[chunkID] = nil  
+					-- If chunk is more than 3 units away, remove it
+					if math.abs(chunkX - e.X) > 3 or math.abs(chunkY - e.Y) > 3 then
+						print("Removing distant chunk at", chunkX, chunkY)
+
+						msg.post(self.listener_url, PP_DELETE, message)
+						go.delete(chunkInstance)  
+						self.chunks[chunkID] = nil  
+					end
+
 				end
-				
 			end
 		end
 	end
+
 end
 
 local function make_callback(login)
 	return function (self, conn, data)
+		local current_time = socket.gettime()
 		if data.event == websocket.EVENT_DISCONNECTED then
 			msg.post(self.listener_url, PP_DISCONNECTED, { error = data.message })
 			self.connected = false
@@ -207,6 +220,7 @@ function fixed_update(self, dt)
 end
 
 local function connect(self, un, pw)
+	local current_time = socket.gettime()
 	self.url = "wss://planetaryprocessing.io/_ws"
 	local params = {
 		headers="Origin: https://planetaryprocessing.io\r\n",
@@ -230,6 +244,7 @@ function final(self)
 end
 
 function on_message(self, message_id, message, sender)
+	local current_time = socket.gettime()
 	if message_id == PP_INIT then
 		self.listener_url = sender
 		self.entities = {}
