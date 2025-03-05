@@ -105,10 +105,6 @@ local function handle(self, packet)
 		if k == "Update" then
 			-- create entity message
 			local message = {uuid=e.EntityID, x=e.X, y=e.Y, z=e.Z, type=e.Type, data=json.decode(e.Data)}
-			if message.data.test then
-				local current_time = socket.gettime()
-				print("Ping:", socket.gettime() - message.data.test)
-			end
 
 			-- is this a new entity?
 			if not self.entities[e.EntityID] then
@@ -190,7 +186,6 @@ end
 
 local function make_callback(login)
 	return function (self, conn, data)
-		local current_time = socket.gettime()
 		if data.event == websocket.EVENT_DISCONNECTED then
 			msg.post(self.listener_url, PP_DISCONNECTED, { error = data.message })
 			self.connected = false
