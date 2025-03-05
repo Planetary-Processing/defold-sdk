@@ -1,7 +1,3 @@
-components {
-  id: "entity"
-  component: "/example/ping.script"
-}
 embedded_components {
   id: "sprite"
   type: "sprite"
