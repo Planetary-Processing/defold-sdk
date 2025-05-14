@@ -68,7 +68,7 @@ protoc:load(protofile)
 go.property("player_url", hash("/player"))
 go.property("gameid", 0)
 go.property("chunk_size", 64)
-go.property("event_script_url",  msg.url("/main#eventCallback"))
+go.property("server_to_client_url",  msg.url("#server_to_client"))
 
 
 local chunksActive = true
@@ -181,11 +181,11 @@ local function handle(self, packet)
 				end
 			end
 		elseif k == "Event" and e ~= "" then
-			-- Send the event to the external script via a message
-			if self.event_script_url then
-				msg.post(self.event_script_url, hash("event_callback"), { event = e })
+			-- Send the server-to-client event to the external script via a message
+			if self.server_to_client_url then
+				msg.post(self.server_to_client_url, hash("pp_server_to_client"), { message = e })
 			else
-				print("Warning: event_script_url is not set.")
+				print("Warning: server_to_client_url is not set.")
 			end
 		end
 	

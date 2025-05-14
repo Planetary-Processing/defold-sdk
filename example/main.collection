@@ -1,24 +1,36 @@
 name: "main"
+instances {
+  id: "camera"
+  prototype: "/orthographic/camera.go"
+  component_properties {
+    id: "script"
+    properties {
+      id: "zoom"
+      value: "5.0"
+      type: PROPERTY_TYPE_NUMBER
+    }
+    properties {
+      id: "follow"
+      value: "true"
+      type: PROPERTY_TYPE_BOOLEAN
+    }
+    properties {
+      id: "follow_target"
+      value: "/player"
+      type: PROPERTY_TYPE_HASH
+    }
+  }
+}
 scale_along_z: 0
 embedded_instances {
   id: "main"
   data: "components {\n"
   "  id: \"master\"\n"
   "  component: \"/pp/master.script\"\n"
-  "  properties {\n"
-  "    id: \"gameid\"\n"
-  "    value: \"7870.0\"\n"
-  "    type: PROPERTY_TYPE_NUMBER\n"
-  "  }\n"
-  "  properties {\n"
-  "    id: \"event_script_url\"\n"
-  "    value: \"/main#eventCallback\"\n"
-  "    type: PROPERTY_TYPE_URL\n"
-  "  }\n"
   "}\n"
   "components {\n"
-  "  id: \"eventCallback\"\n"
-  "  component: \"/example/eventCallback.script\"\n"
+  "  id: \"server_to_client\"\n"
+  "  component: \"/example/server_to_client.script\"\n"
   "}\n"
   "embedded_components {\n"
   "  id: \"treefactory\"\n"
@@ -55,35 +67,6 @@ embedded_instances {
   data: "components {\n"
   "  id: \"player\"\n"
   "  component: \"/example/player.script\"\n"
-  "}\n"
-  "components {\n"
-  "  id: \"camera\"\n"
-  "  component: \"/orthographic/camera.script\"\n"
-  "  properties {\n"
-  "    id: \"zoom\"\n"
-  "    value: \"5.0\"\n"
-  "    type: PROPERTY_TYPE_NUMBER\n"
-  "  }\n"
-  "  properties {\n"
-  "    id: \"projection\"\n"
-  "    value: \"FIXED_ZOOM\"\n"
-  "    type: PROPERTY_TYPE_HASH\n"
-  "  }\n"
-  "  properties {\n"
-  "    id: \"follow\"\n"
-  "    value: \"true\"\n"
-  "    type: PROPERTY_TYPE_BOOLEAN\n"
-  "  }\n"
-  "  properties {\n"
-  "    id: \"follow_immediately\"\n"
-  "    value: \"false\"\n"
-  "    type: PROPERTY_TYPE_BOOLEAN\n"
-  "  }\n"
-  "  properties {\n"
-  "    id: \"follow_target\"\n"
-  "    value: \"/player\"\n"
-  "    type: PROPERTY_TYPE_HASH\n"
-  "  }\n"
   "}\n"
   "components {\n"
   "  id: \"entity\"\n"

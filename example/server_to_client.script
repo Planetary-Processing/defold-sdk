@@ -1,0 +1,10 @@
+function server_to_client(message)
+	-- Handle a manual message from server-to-client here: 
+	print("Received message from the server:", message)
+end
+
+function on_message(self, message_id, message, sender)
+	if message_id == hash("pp_server_to_client") then
+		server_to_client(message.message)
+	end
+end
