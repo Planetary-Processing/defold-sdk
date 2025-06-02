@@ -46,6 +46,12 @@ message Packet {
 	string Arbitrary = 5; // client side
 	string Event = 6; // server side
 	ChunkUpdate Chunk = 7; // server side
+	Message Message = 8; // client side (replacing Arbitrary)
+}
+
+message Message {
+	string TargetUUID = 1;
+	string Data = 2;
 }
 
 message Login {
@@ -80,6 +86,8 @@ local PP_INIT = hash("pp_init")
 local PP_JOIN = hash("pp_join")
 -- send pp_message to this script to send a custom message to the server
 local PP_MESSAGE = hash("pp_message")
+-- pp_message but to a specified UUID
+local PP_DIRECT_MESSAGE = hash("pp_direct_message")
 -- send pp_leave to this script to terminate the connection
 local PP_DISCONNECT = hash("pp_disconnect")
 
@@ -259,6 +267,8 @@ function on_message(self, message_id, message, sender)
 		local d = websocket.send(self.connection, base64.encode(pb.encode("planetary.Packet", {Join={}})))
 	elseif message_id == PP_MESSAGE and self.connected then
 		local d = websocket.send(self.connection, base64.encode(pb.encode("planetary.Packet", {Arbitrary=json.encode(message)})))
+	elseif message_id == PP_DIRECT_MESSAGE and self.connected then
+		local d = websocket.send(self.connection, base64.encode(pb.encode("planetary.Packet", {Message = {TargetUUID = message.TargetUUID, Data = json.encode(message.Data)}})))
 	elseif message_id == PP_DISCONNECT then
 		for eID,eURL in pairs(self.entities) do
 			if self.uuid ~= eID then go.delete(eURL) end
